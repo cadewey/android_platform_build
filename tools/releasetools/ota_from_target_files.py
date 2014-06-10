@@ -84,6 +84,9 @@ Usage:  ota_from_target_files [flags] input_target_files output_ota_package
       Specifies the number of worker-threads that will be used when
       generating patches for incremental updates (defaults to 3).
 
+  --recoveryex <boolean>
+      Enable or disable the exclusion of recovery.img or /recovery.
+      Enabled by default.
 """
 
 import sys
@@ -122,6 +125,7 @@ OPTIONS.updater_binary = None
 OPTIONS.oem_source = None
 OPTIONS.fallback_to_full = True
 OPTIONS.full_radio = False
+OPTIONS.recoveryex = True
 
 def MostPopularKey(d, default):
   """Given a dict, return the key corresponding to the largest
@@ -549,7 +553,8 @@ def WriteFullOTAPackage(input_zip, output_zip):
   #    complete script normally
   #    (allow recovery to mark itself finished and reboot)
 
-  recovery_img = common.GetBootableImage("recovery.img", "recovery.img",
+  if not OPTIONS.recoveryex:
+    recovery_img = common.GetBootableImage("recovery.img", "recovery.img",
                                          OPTIONS.input_tmp, "RECOVERY")
   if OPTIONS.two_step:
     if not OPTIONS.info_dict.get("multistage_support", None):
@@ -558,7 +563,8 @@ def WriteFullOTAPackage(input_zip, output_zip):
     assert fs.fs_type.upper() == "EMMC", \
         "two-step packages only supported on devices with EMMC /misc partitions"
     bcb_dev = {"bcb_dev": fs.device}
-    common.ZipWriteStr(output_zip, "recovery.img", recovery_img.data)
+    if not OPTIONS.recoveryex:
+      common.ZipWriteStr(output_zip, "recovery.img", recovery_img.data)
     script.AppendExtra("""
 if get_stage("%(bcb_dev)s") == "2/3" then
 """ % bcb_dev)
@@ -602,7 +608,7 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
   else:
     script.FormatPartition("/system")
     script.Mount("/system", recovery_mount_options)
-    if not has_recovery_patch:
+    if not has_recovery_patch and not OPTIONS.recoveryex:
       script.UnpackPackageDir("recovery", "/system")
     script.UnpackPackageDir("system", "/system")
 
@@ -611,14 +617,13 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
 
   boot_img = common.GetBootableImage("boot.img", "boot.img",
                                      OPTIONS.input_tmp, "BOOT")
+  if not OPTIONS.recoveryex:
+    common.MakeRecoveryPatch(OPTIONS.input_tmp, output_zip, recovery_img, boot_img)
 
   if not block_based:
     def output_sink(fn, data):
       common.ZipWriteStr(output_zip, "recovery/" + fn, data)
       system_items.Get("system/" + fn)
-
-    common.MakeRecoveryPatch(OPTIONS.input_tmp, output_sink,
-                             recovery_img, boot_img)
 
     system_items.GetMetadata(input_zip)
     system_items.Get("system").SetPermissions(script)
@@ -1336,7 +1341,7 @@ else
   if vendor_diff:
     vendor_items = ItemSet("vendor", "META/vendor_filesystem_config.txt")
 
-  if updating_recovery:
+  if updating_recovery and not OPTIONS.recoveryex:
     # Recovery is generated as a patch using both the boot image
     # (which contains the same linux kernel as recovery) and the file
     # /system/etc/recovery-resource.dat (which contains all the images
@@ -1353,8 +1358,6 @@ else
 
       common.MakeRecoveryPatch(OPTIONS.target_tmp, output_sink,
                                target_recovery, target_boot)
-      script.DeleteFiles(["/system/recovery-from-boot.p",
-                          "/system/etc/install-recovery.sh"])
     print "recovery image changed; including as patch from boot."
   else:
     print "recovery image unchanged; skipping."
@@ -1530,6 +1533,8 @@ def main(argv):
       OPTIONS.updater_binary = a
     elif o in ("--no_fallback_to_full",):
       OPTIONS.fallback_to_full = False
+    elif o in ("--recoveryex"):
+      OPTIONS.recoveryex = bool(a.lower() == 'true')
     else:
       return False
     return True
@@ -1553,6 +1558,7 @@ def main(argv):
                                  "oem_settings=",
                                  "verify",
                                  "no_fallback_to_full",
+                                 "recoveryex=",
                              ], extra_option_handler=option_handler)
 
   if len(args) != 2:
