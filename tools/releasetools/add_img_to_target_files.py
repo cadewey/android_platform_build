@@ -330,25 +330,8 @@ def AddImagesToTargetFiles(filename):
     if boot_image:
       boot_image.AddToZip(output_zip)
 
-  recovery_image = None
-  if has_recovery:
-    banner("recovery")
-    prebuilt_path = os.path.join(OPTIONS.input_tmp, "IMAGES", "recovery.img")
-    if os.path.exists(prebuilt_path):
-      print "recovery.img already exists in IMAGES/, no need to rebuild..."
-      if OPTIONS.rebuild_recovery:
-        recovery_image = common.GetBootableImage(
-            "IMAGES/recovery.img", "recovery.img", OPTIONS.input_tmp,
-            "RECOVERY")
-    else:
-      recovery_image = common.GetBootableImage(
-          "IMAGES/recovery.img", "recovery.img", OPTIONS.input_tmp, "RECOVERY")
-      if recovery_image:
-        recovery_image.AddToZip(output_zip)
-
   banner("system")
-  system_imgname = AddSystem(output_zip, recovery_img=recovery_image,
-                             boot_img=boot_image)
+  system_imgname = AddSystem(output_zip, recovery_img=None, boot_img=boot_image)
   vendor_imgname = None
   if has_vendor:
     banner("vendor")

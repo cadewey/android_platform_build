@@ -1650,9 +1650,8 @@ def MakeRecoveryPatch(input_dir, output_sink, recovery_img, boot_img,
     else:
       bonus_args = ""
 
-    d = Difference(recovery_img, boot_img, diff_program=diff_program)
-    _, _, patch = d.ComputePatch()
-    output_sink("recovery-from-boot.p", patch)
+  d = Difference(recovery_img, boot_img, diff_program=diff_program)
+  _, _, patch = d.ComputePatch()
 
   try:
     # The following GetTypeAndDevice()s need to use the path in the target
@@ -1661,61 +1660,3 @@ def MakeRecoveryPatch(input_dir, output_sink, recovery_img, boot_img,
     recovery_type, recovery_device = GetTypeAndDevice("/recovery", info_dict)
   except KeyError:
     return
-
-  if full_recovery_image:
-    sh = """#!/system/bin/sh
-if ! applypatch -c %(type)s:%(device)s:%(size)d:%(sha1)s; then
-  applypatch /system/etc/recovery.img %(type)s:%(device)s %(sha1)s %(size)d && log -t recovery "Installing new recovery image: succeeded" || log -t recovery "Installing new recovery image: failed"
-else
-  log -t recovery "Recovery image already installed"
-fi
-""" % {'type': recovery_type,
-       'device': recovery_device,
-       'sha1': recovery_img.sha1,
-       'size': recovery_img.size}
-  else:
-    sh = """#!/system/bin/sh
-if ! applypatch -c %(recovery_type)s:%(recovery_device)s:%(recovery_size)d:%(recovery_sha1)s; then
-  applypatch %(bonus_args)s %(boot_type)s:%(boot_device)s:%(boot_size)d:%(boot_sha1)s %(recovery_type)s:%(recovery_device)s %(recovery_sha1)s %(recovery_size)d %(boot_sha1)s:/system/recovery-from-boot.p && log -t recovery "Installing new recovery image: succeeded" || log -t recovery "Installing new recovery image: failed"
-else
-  log -t recovery "Recovery image already installed"
-fi
-""" % {'boot_size': boot_img.size,
-       'boot_sha1': boot_img.sha1,
-       'recovery_size': recovery_img.size,
-       'recovery_sha1': recovery_img.sha1,
-       'boot_type': boot_type,
-       'boot_device': boot_device,
-       'recovery_type': recovery_type,
-       'recovery_device': recovery_device,
-       'bonus_args': bonus_args}
-
-  # The install script location moved from /system/etc to /system/bin
-  # in the L release.  Parse init.*.rc files to find out where the
-  # target-files expects it to be, and put it there.
-  sh_location = "etc/install-recovery.sh"
-  found = False
-  if system_root_image:
-    init_rc_dir = os.path.join(input_dir, "ROOT")
-  else:
-    init_rc_dir = os.path.join(input_dir, "BOOT", "RAMDISK")
-  init_rc_files = os.listdir(init_rc_dir)
-  for init_rc_file in init_rc_files:
-    if (not init_rc_file.startswith('init.') or
-        not init_rc_file.endswith('.rc')):
-      continue
-
-    with open(os.path.join(init_rc_dir, init_rc_file)) as f:
-      for line in f:
-        m = re.match(r"^service flash_recovery /system/(\S+)\s*$", line)
-        if m:
-          sh_location = m.group(1)
-          found = True
-          break
-
-    if found:
-      break
-
-  print "putting script in", sh_location
-
-  output_sink(sh_location, sh)
