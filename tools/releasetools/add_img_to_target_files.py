@@ -226,11 +226,11 @@ def AddImagesToTargetFiles(filename):
   if boot_image:
     boot_image.AddToZip(output_zip)
 
-  banner("recovery")
-  recovery_image = common.GetBootableImage(
-      "IMAGES/recovery.img", "recovery.img", OPTIONS.input_tmp, "RECOVERY")
-  if recovery_image:
-    recovery_image.AddToZip(output_zip)
+  #banner("recovery")
+  #recovery_image = common.GetBootableImage(
+  #    "IMAGES/recovery.img", "recovery.img", OPTIONS.input_tmp, "RECOVERY")
+  #if recovery_image:
+  #  recovery_image.AddToZip(output_zip)
 
   banner("system")
   AddSystem(output_zip)
