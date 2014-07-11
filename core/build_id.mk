@@ -18,4 +18,6 @@
 # (like "CRB01").  It must be a single word, and is
 # capitalized by convention.
 
-export BUILD_ID=NDE63P
+ifeq ($(BUILD_ID),)
+BUILD_ID := NDE63P
+endif
