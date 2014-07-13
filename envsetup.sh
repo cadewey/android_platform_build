@@ -16,6 +16,7 @@ Invoke ". build/envsetup.sh" from your shell to add the following functions to y
 - resgrep: Greps on all local res/*.xml files.
 - sgrep:   Greps on all local source files.
 - godir:   Go to the directory containing a file.
+- mka:     Builds using SCHED_BATCH on all processors
 
 Look at the source to view more functions. The complete list is:
 EOF
@@ -549,6 +550,38 @@ function lunch()
 
     set_stuff_for_environment
     printconfig
+}
+
+function brunch()
+{
+    breakfast $*
+    if [ $? -eq 0 ]; then
+        mka otapackage
+    else
+        echo "No such item in brunch menu. Try 'breakfast'"
+        return 1
+    fi
+    return $?
+}
+
+function breakfast()
+{
+    target=$1
+
+    if [ $# -eq 0 ]; then
+        # No arguments, so let's have the full menu
+        lunch
+    else
+        echo "z$target" | grep -q "-"
+        if [ $? -eq 0 ]; then
+            # A buildtype was specified, assume a full device name
+            lunch $target
+        else
+            # This is probably just the model name
+            lunch aosp_$target-userdebug
+        fi
+    fi
+    return $?
 }
 
 # Tab completion for lunch.
@@ -1629,6 +1662,17 @@ function godir () {
         pathname=${lines[0]}
     fi
     \cd $T/$pathname
+}
+
+function mka() {
+    case `uname -s` in
+        Darwin)
+            make -j `sysctl hw.ncpu|cut -d" " -f2` "$@"
+            ;;
+        *)
+            schedtool -B -n 1 -e ionice -n 1 make -j `cat /proc/cpuinfo | grep "^processor" | wc -l` "$@"
+            ;;
+    esac
 }
 
 # Force JAVA_HOME to point to java 1.7 or java 1.6  if it isn't already set.
