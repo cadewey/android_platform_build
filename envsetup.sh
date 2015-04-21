@@ -556,7 +556,7 @@ function brunch()
 {
     breakfast $*
     if [ $? -eq 0 ]; then
-        mka otapackage
+        mka dist
     else
         echo "No such item in brunch menu. Try 'breakfast'"
         return 1
@@ -578,7 +578,7 @@ function breakfast()
             lunch $target
         else
             # This is probably just the model name
-            lunch aosp_$target-userdebug
+            lunch aosp_$target-user
         fi
     fi
     return $?
