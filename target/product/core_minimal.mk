@@ -22,6 +22,8 @@ PRODUCT_BRAND := generic
 PRODUCT_DEVICE := generic
 PRODUCT_NAME := core
 
+PRODUCT_WEBVIEW_LIBS_ONLY := yes
+
 PRODUCT_PACKAGES += \
     BackupRestoreConfirmation \
     DownloadProvider \
@@ -76,6 +78,8 @@ PRODUCT_PACKAGES += \
     uncrypt \
     voip-common \
     webview \
+    libwebviewchromium_plat_support \
+    libwebviewchromium_loader \
     wifi-service
 
 PRODUCT_COPY_FILES += \
