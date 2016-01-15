@@ -19,5 +19,5 @@
 # capitalized by convention.
 
 ifeq ($(BUILD_ID),)
-BUILD_ID := MMB29K
+BUILD_ID := MMB29S
 endif
