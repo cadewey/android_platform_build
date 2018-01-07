@@ -19,3 +19,7 @@
 # capitalized by convention.
 
 export BUILD_ID=OPM3.171019.013
+
+ifneq ($(BUILD_SUFFIX),)
+BUILD_ID := $(BUILD_ID).$(BUILD_SUFFIX)
+endif
